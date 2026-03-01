@@ -1,0 +1,35 @@
+<header class="bg-white shadow-sm border-b border-gray-200">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center py-4">
+      <div class="flex items-center">
+        <.link navigate={~p"/"} class="text-xl font-bold text-gray-900">
+          DXNN Analyzer
+        </.link>
+      </div>
+      <nav class="flex space-x-4">
+        <.link
+          navigate={~p"/"}
+          class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+        >
+          Dashboard
+        </.link>
+        <.link
+          navigate={~p"/agents"}
+          class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+        >
+          Agents
+        </.link>
+        <.link
+          navigate={~p"/master"}
+          class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+        >
+          Master Database
+        </.link>
+      </nav>
+    </div>
+  </div>
+</header>
+<main>
+  <.flash_group flash={@flash} />
+  <%= @inner_content %>
+</main>

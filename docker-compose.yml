@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  dxnn_analyzer_web:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+    container_name: dxnn_analyzer_web
+    ports:
+      - "4000:4000"
+    environment:
+      - MIX_ENV=dev
+      - PORT=4000
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE:-dxnn_analyzer_secret_key_base_change_in_production_min_64_chars}
+      - PHX_HOST=${PHX_HOST:-localhost}
+    volumes:
+      # Mount your DXNN-Trader Mnesia folders here
+      - ./DXNN-Trader-V2:/app/DXNN-Trader-V2:ro
+      # Persist any generated data
+      - ./data:/app/data
+    restart: unless-stopped
+
+  # Optional: Development container with hot reload
+  dxnn_analyzer_dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: dxnn_analyzer_dev
+    ports:
+      - "4000:4000"
+    environment:
+      - MIX_ENV=dev
+      - PORT=4000
+    volumes:
+      - ./dxnn_analyzer:/app/dxnn_analyzer
+      - ./dxnn_analyzer_web:/app/dxnn_analyzer_web
+      - ./DXNN-Trader-V2:/app/DXNN-Trader-V2:ro
+      - ./data:/app/data
+    command: mix phx.server
+    profiles:
+      - dev

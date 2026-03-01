@@ -1,0 +1,10 @@
+{application, dxnn_analyzer,
+ [{description, "DXNN Agent Analysis and Management Tool"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications, [kernel, stdlib, mnesia]},
+  {env,[]},
+  {modules, []},
+  {licenses, ["Apache 2.0"]},
+  {links, []}
+ ]}.

@@ -162,6 +162,7 @@ analyzer:load → mnesia_loader:load_folder → {ok, ContextRecord}
 | `comparator.erl` | Multi-agent comparison and similarity |
 | `stats_collector.erl` | Aggregate metrics and reports |
 | `population_builder.erl` | Create new populations from selected agents |
+| `master_database.erl` | Manage centralized master database of elite agents |
 
 ### 5. Data Layer
 
@@ -229,6 +230,122 @@ LiveView assigns agents
 Template renders table
   ↓
 Browser displays agent list
+```
+
+### Saving to Master Database
+
+```
+User selects agents and clicks "Save to Master Database"
+  ↓
+AgentListLive.handle_event("save_to_master", params)
+  ↓
+AnalyzerBridge.init_master_database("./data")
+  ↓
+GenServer.call → :master_database.init(base_path)
+  ↓
+Create/verify master database Mnesia folder
+  ↓
+AnalyzerBridge.add_to_master(agent_ids, context, master_path)
+  ↓
+GenServer.call → :master_database.add_agents(ids, context, path)
+  ↓
+Fetch agent topologies from source context ETS
+  ↓
+Switch Mnesia to master database directory
+  ↓
+Write agents with full topology to master database
+  ↓
+Return success count
+  ↓
+LiveView shows success message
+  ↓
+User can view master database or load as context
+```
+
+## Master Database Architecture
+
+### Purpose
+
+The Master Database provides a centralized repository for curating elite agents across multiple experiments. It allows users to:
+- Build a collection of best-performing agents
+- Maintain a "hall of fame" across all experiments
+- Prepare agents for deployment to live trading
+- Compare agents from different experimental runs
+
+### Storage Structure
+
+```
+./data/
+└── MasterDatabase/
+    └── Mnesia.nonode@nohost/
+        ├── agent.DCD
+        ├── cortex.DCD
+        ├── neuron.DCD
+        ├── sensor.DCD
+        ├── actuator.DCD
+        └── substrate.DCD
+```
+
+### Data Flow
+
+```
+Source Context (ETS)
+    ↓ Read agent topology
+Agent Data (in-memory)
+    ↓ Switch Mnesia context
+Master Database (Mnesia)
+    ↓ Write full topology
+Persistent Storage (disk)
+```
+
+### Key Features
+
+1. **Non-destructive**: Original contexts remain unchanged
+2. **Full topology preservation**: All neurons, sensors, actuators copied
+3. **Duplicate detection**: Won't add same agent twice
+4. **DXNN-Trader compatible**: Can deploy master database directly
+5. **Context loading**: Can load master as a regular context for analysis
+
+### Implementation Details
+
+**Erlang Module (`master_database.erl`):**
+- `init/1`: Initialize or verify master database
+- `add_agents/3`: Copy agents from source context to master
+- `list_agents/1`: List all agents in master database
+- `remove_agents/2`: Remove agents from master
+- `clear_master/1`: Clear entire master database
+
+**Bridge Functions:**
+- `init_master_database/1`: Initialize master database
+- `add_to_master/3`: Add agents to master
+- `list_master_agents/1`: List master agents
+- `remove_from_master/2`: Remove from master
+- `load_master_as_context/2`: Load master as context
+
+**LiveView Pages:**
+- `MasterDatabaseLive`: View and manage master database
+- `AgentListLive`: Enhanced with "Save to Master" button
+
+### Workflow Example
+
+```
+1. Load Context A (experiment 1)
+   ↓
+2. Select top 5 agents
+   ↓
+3. Save to Master Database
+   ↓
+4. Load Context B (experiment 2)
+   ↓
+5. Select top 3 agents
+   ↓
+6. Save to Master Database
+   ↓
+7. View Master Database (8 elite agents)
+   ↓
+8. Load Master as Context "elite"
+   ↓
+9. Analyze, compare, or deploy to DXNN-Trader
 ```
 
 ## Concurrency Model
