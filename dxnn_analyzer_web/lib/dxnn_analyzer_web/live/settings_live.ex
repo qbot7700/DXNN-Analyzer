@@ -76,13 +76,30 @@ defmodule DxnnAnalyzerWeb.SettingsLive do
     
     if experiment do
       # Check if the path exists and has Mnesia files
+      # Check both the path itself and the Mnesia.nonode@nohost subdirectory
+      mnesia_path = Path.join(experiment.path, "Mnesia.nonode@nohost")
+      
       has_mnesia_files = case File.ls(experiment.path) do
         {:ok, files} ->
-          Enum.any?(files, fn f -> 
+          # Check if files are directly in the path
+          direct_files = Enum.any?(files, fn f -> 
             String.ends_with?(f, ".DCD") or 
             String.ends_with?(f, ".DCL") or 
             String.ends_with?(f, ".DAT")
           end)
+          
+          # Or check if Mnesia.nonode@nohost subdirectory exists with files
+          subdir_files = case File.ls(mnesia_path) do
+            {:ok, subfiles} ->
+              Enum.any?(subfiles, fn f -> 
+                String.ends_with?(f, ".DCD") or 
+                String.ends_with?(f, ".DCL") or 
+                String.ends_with?(f, ".DAT")
+              end)
+            _ -> false
+          end
+          
+          direct_files or subdir_files
         _ -> false
       end
       
@@ -134,6 +151,33 @@ defmodule DxnnAnalyzerWeb.SettingsLive do
       
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, "Failed: #{inspect(reason)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("save_experiment", %{"name" => name}, socket) do
+    experiments = socket.assigns.experiments
+    experiment = Enum.find(experiments, fn e -> e.name == name end)
+    
+    if experiment do
+      IO.puts("=== Saving experiment ===")
+      IO.puts("Name: #{name}")
+      IO.puts("Path: #{experiment.path}")
+      
+      case AnalyzerBridge.save_experiment(name, experiment.path) do
+        {:ok, saved_path} ->
+          IO.puts("Save successful to: #{inspect(saved_path)}")
+          socket =
+            socket
+            |> put_flash(:info, "Experiment '#{name}' saved to disk successfully")
+          {:noreply, socket}
+        
+        {:error, reason} ->
+          IO.puts("Save failed: #{inspect(reason)}")
+          {:noreply, put_flash(socket, :error, "Failed to save '#{name}': #{inspect(reason)}")}
+      end
+    else
+      {:noreply, put_flash(socket, :error, "Experiment not found")}
     end
   end
 
@@ -237,6 +281,15 @@ defmodule DxnnAnalyzerWeb.SettingsLive do
                         class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition text-sm"
                       >
                         Load
+                      </button>
+                    <% else %>
+                      <button
+                        phx-click="save_experiment"
+                        phx-value-name={exp.name}
+                        class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition text-sm"
+                        title="Save changes to disk"
+                      >
+                        💾 Save
                       </button>
                     <% end %>
                     <button

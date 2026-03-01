@@ -278,10 +278,31 @@ save_ets_to_mnesia(Context, MnesiaDir) ->
     end,
     
     SchemaFile = filename:join(MnesiaDir, "schema.DAT"),
-    case filelib:is_file(SchemaFile) of
+    SchemaExists = filelib:is_file(SchemaFile),
+    
+    case SchemaExists of
         false ->
             io:format("Creating new Mnesia schema~n"),
-            mnesia:create_schema([node()]);
+            case mnesia:create_schema([node()]) of
+                ok -> ok;
+                {error, {_, {already_exists, _}}} -> 
+                    io:format("Schema already exists, continuing~n"),
+                    ok;
+                {error, Reason, Path} ->
+                    io:format("ERROR: Cannot create schema at ~s: ~p~n", [Path, Reason]),
+                    %% Delete the directory and try again
+                    io:format("Attempting to clean and recreate directory~n"),
+                    file:del_dir_r(MnesiaDir),
+                    filelib:ensure_dir(MnesiaDir ++ "/"),
+                    case mnesia:create_schema([node()]) of
+                        ok -> ok;
+                        {error, R2} -> 
+                            io:format("Failed again: ~p~n", [R2]),
+                            throw({schema_creation_failed, R2})
+                    end;
+                {error, Reason} ->
+                    throw({schema_creation_failed, Reason})
+            end;
         true ->
             io:format("Using existing Mnesia schema~n")
     end,
@@ -329,18 +350,24 @@ create_mnesia_tables() ->
     ],
     
     lists:foreach(fun({TableName, Fields}) ->
-        case mnesia:create_table(TableName, [
-            {disc_copies, [node()]},
-            {attributes, Fields},
-            {type, bag},
-            {record_name, TableName}
-        ]) of
-            {atomic, ok} -> 
-                io:format("  Created table: ~p~n", [TableName]);
-            {aborted, {already_exists, _}} ->
-                ok;
-            {aborted, Reason} ->
-                io:format("  Error creating table ~p: ~p~n", [TableName, Reason])
+        %% Check if table already exists
+        case lists:member(TableName, mnesia:system_info(tables)) of
+            true ->
+                io:format("  Table ~p already exists~n", [TableName]);
+            false ->
+                case mnesia:create_table(TableName, [
+                    {disc_copies, [node()]},
+                    {attributes, Fields},
+                    {type, bag},
+                    {record_name, TableName}
+                ]) of
+                    {atomic, ok} -> 
+                        io:format("  Created table: ~p~n", [TableName]);
+                    {aborted, {already_exists, _}} ->
+                        io:format("  Table ~p already exists~n", [TableName]);
+                    {aborted, Reason} ->
+                        io:format("  Error creating table ~p: ~p~n", [TableName, Reason])
+                end
         end
     end, Tables),
     

@@ -135,6 +135,10 @@ defmodule DxnnAnalyzerWeb.AnalyzerBridge do
     GenServer.call(__MODULE__, {:copy_agents_to_experiment, agent_ids, source_context, target_context}, 60_000)
   end
 
+  def save_experiment(experiment_name, experiment_path) do
+    GenServer.call(__MODULE__, {:save_experiment, experiment_name, experiment_path}, 60_000)
+  end
+
   def get_experiments_from_settings do
     GenServer.call(__MODULE__, :get_experiments_from_settings)
   end
@@ -593,6 +597,39 @@ defmodule DxnnAnalyzerWeb.AnalyzerBridge do
   end
 
   @impl true
+  def handle_call({:save_experiment, experiment_name, experiment_path}, _from, state) do
+    IO.puts("=== Bridge save_experiment ===")
+    IO.puts("Experiment name: #{experiment_name}")
+    IO.puts("Experiment path: #{experiment_path}")
+    
+    experiment_context_atom = String.to_atom(experiment_name)
+    
+    # Check if context exists
+    case :ets.lookup(:analyzer_contexts, experiment_context_atom) do
+      [] ->
+        IO.puts("ERROR: Context '#{experiment_name}' not found in ETS")
+        {:reply, {:error, "Context '#{experiment_name}' not loaded. Load it first."}, state}
+      [context] ->
+        IO.puts("Context found: #{inspect(context)}")
+        
+        # Remove "Mnesia.nonode@nohost" from path if it exists
+        # save() will add it back
+        clean_path = if String.ends_with?(experiment_path, "Mnesia.nonode@nohost") do
+          Path.dirname(experiment_path)
+        else
+          experiment_path
+        end
+        
+        IO.puts("Clean path: #{clean_path}")
+        experiment_path_charlist = String.to_charlist(clean_path)
+        
+        result = :master_database.save(experiment_context_atom, experiment_path_charlist)
+        IO.puts("Save result: #{inspect(result)}")
+        {:reply, format_result(result), state}
+    end
+  end
+
+  @impl true
   def handle_call(:get_experiments_from_settings, _from, state) do
     experiments = :experiment_settings.get_experiments()
     
@@ -633,12 +670,19 @@ defmodule DxnnAnalyzerWeb.AnalyzerBridge do
         case result do
           {:ok, _} ->
             # Save the empty database to disk
-            save_result = :master_database.save(context_atom, String.to_charlist(path))
+            # Remove "Mnesia.nonode@nohost" from path if it exists (save() will add it back)
+            clean_path = if String.ends_with?(path, "Mnesia.nonode@nohost") do
+              Path.dirname(path)
+            else
+              path
+            end
+            
+            save_result = :master_database.save(context_atom, String.to_charlist(clean_path))
             case save_result do
               {:ok, _} ->
-                # Add to settings
+                # Add to settings with the clean path
                 name_bin = :erlang.list_to_binary(String.to_charlist(name))
-                path_bin = :erlang.list_to_binary(String.to_charlist(path))
+                path_bin = :erlang.list_to_binary(String.to_charlist(clean_path))
                 add_result = :experiment_settings.add_experiment(name_bin, path_bin)
                 {:reply, add_result, state}
               error -> {:reply, error, state}

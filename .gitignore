@@ -1,0 +1,64 @@
+# Erlang/OTP
+*.beam
+*.plt
+erl_crash.dump
+.erlang.cookie
+
+# Rebar3
+.rebar3/
+_build/
+rebar3.crashdump
+
+# Elixir/Phoenix
+/_build/
+/deps/
+/doc/
+/.fetch
+erl_crash.dump
+*.ez
+*.beam
+/config/*.secret.exs
+.elixir_ls/
+
+# Phoenix
+/priv/static/
+/assets/node_modules/
+
+# Database files
+Databases/
+*.db
+*.sqlite
+*.sqlite3
+
+# Mnesia
+Mnesia.*/
+mnesia/
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+Dockerfile*
+docker-compose*.yml
+
+# Logs
+*.log
+logs/
+
+# Test artifacts
+test_*.erl
+verify_*.erl

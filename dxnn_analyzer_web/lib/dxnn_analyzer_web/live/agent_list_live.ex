@@ -113,11 +113,30 @@ defmodule DxnnAnalyzerWeb.AgentListLive do
 
       case AnalyzerBridge.copy_agents_to_experiment(agent_ids, source_context, target_context) do
         {:ok, count} ->
+          # Get the target experiment path for saving
+          experiments = AnalyzerBridge.get_experiments_from_settings()
+          target_exp = Enum.find(experiments, fn e -> e.name == target_context end)
+          
+          # Auto-save the experiment to disk
+          save_result = if target_exp do
+            AnalyzerBridge.save_experiment(target_context, target_exp.path)
+          else
+            {:error, "Experiment not found in settings"}
+          end
+          
           socket =
             socket
             |> assign(:selected_agents, MapSet.new())
             |> assign(:show_copy_modal, false)
-            |> put_flash(:info, "Copied #{count} agents to #{target_context}")
+          
+          socket = case save_result do
+            {:ok, _} ->
+              put_flash(socket, :info, "Copied #{count} agents to #{target_context} and saved to disk")
+            {:error, reason} ->
+              put_flash(socket, :warning, "Copied #{count} agents to #{target_context} (in memory only). Save failed: #{inspect(reason)}. Use Settings page to save manually.")
+          end
+          
+          {:noreply, socket}
 
           {:noreply, socket}
 
