@@ -295,7 +295,7 @@ defmodule DxnnAnalyzerWeb.SettingsLive do
             <div class="flex gap-2">
               <button
                 phx-click="load_all_experiments"
-                class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition"
+                class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition border border-purple-700 shadow-sm"
               >
                 📂 Load All
               </button>

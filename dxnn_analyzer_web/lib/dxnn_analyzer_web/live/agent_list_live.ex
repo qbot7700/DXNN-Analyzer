@@ -188,14 +188,27 @@ defmodule DxnnAnalyzerWeb.AgentListLive do
 
   defp load_context_details(socket, context) do
     # Load populations
-    populations = case AnalyzerBridge.get_populations(context) do
-      {:ok, pops} -> pops
-      _ -> []
+    populations_result = AnalyzerBridge.get_populations(context)
+    IO.puts("=== populations_result: #{inspect(populations_result)}")
+    
+    populations = case populations_result do
+      {:ok, pops} when is_list(pops) -> 
+        IO.puts("Matched {:ok, list} with #{length(pops)} items")
+        pops
+      {:error, _} = err -> 
+        IO.puts("Got error: #{inspect(err)}")
+        []
+      other -> 
+        IO.puts("Got unexpected: #{inspect(other)}")
+        []
     end
 
     # Load species
-    species = case AnalyzerBridge.get_species(context) do
-      {:ok, specs} -> specs
+    species_result = AnalyzerBridge.get_species(context)
+    IO.puts("=== species_result: #{inspect(species_result)}")
+    
+    species = case species_result do
+      {:ok, specs} when is_list(specs) -> specs
       _ -> []
     end
 

@@ -8,7 +8,8 @@ defmodule DxnnAnalyzerWeb.MixProject do
       elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      releases: releases()
     ]
   end
 
@@ -42,6 +43,15 @@ defmodule DxnnAnalyzerWeb.MixProject do
        app: false,
        compile: false,
        depth: 1}
+    ]
+  end
+
+  defp releases do
+    [
+      dxnn_analyzer_web: [
+        include_executables_for: [:unix],
+        applications: [runtime_tools: :permanent]
+      ]
     ]
   end
 end
