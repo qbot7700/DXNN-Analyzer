@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  dxnn_analyzer_web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    volumes:
+      # Mount your actual database folders (read-only to prevent accidental changes)
+      - C:\Users\qbot7\OneDrive\Documents\Databases:/app/Databases:ro
+      - C:\Users\qbot7\OneDrive\Documents\DXNN-Trader-V2\DXNN-Trader-v2\Mnesia.nonode@nohost:/app/Mnesia.nonode@nohost:ro
+      # Persist master database and data
+      - dxnn_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  dxnn_data:
